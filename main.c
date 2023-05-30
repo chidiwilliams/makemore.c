@@ -154,6 +154,12 @@ Value *initBinaryValue(double data, char *label, Value *leftChild,
   return value;
 }
 
+Value *initUnaryValue(double data, char *label, Value *child) {
+  Value *value = initValue(data, label);
+  value->leftChild = child;
+  return value;
+}
+
 Value *valueAdd(Value *value1, Value *value2) {
   Value *result =
       initBinaryValue(value1->data + value2->data, "+", value1, value2);
@@ -163,6 +169,11 @@ Value *valueAdd(Value *value1, Value *value2) {
 Value *valueTimes(Value *value1, Value *value2) {
   Value *result =
       initBinaryValue(value1->data * value2->data, "*", value1, value2);
+  return result;
+}
+
+Value *valueTanh(Value *value) {
+  Value *result = initUnaryValue(tanh(value->data), "tanh", value);
   return result;
 }
 
@@ -203,7 +214,8 @@ int main() {
 
   Value *b = initValue(6.88113735870195432, "b");
 
-  Value *result = valueAdd(valueAdd(valueTimes(x1, w1), valueTimes(x2, w2)), b);
+  Value *result =
+      valueTanh(valueAdd(valueAdd(valueTimes(x1, w1), valueTimes(x2, w2)), b));
 
   printValue(result, 0);
 
