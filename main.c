@@ -5,7 +5,7 @@
 
 #define ALPHABET_SIZE 27
 
-void print_bigram(double bigram[ALPHABET_SIZE][ALPHABET_SIZE]) {
+void printBigram(double bigram[ALPHABET_SIZE][ALPHABET_SIZE]) {
   for (int i = 0; i < ALPHABET_SIZE; i++) {
     for (int j = 0; j < ALPHABET_SIZE; j++) {
       printf("%5f ", bigram[i][j]);
@@ -14,7 +14,7 @@ void print_bigram(double bigram[ALPHABET_SIZE][ALPHABET_SIZE]) {
   }
 }
 
-int sample_multinomial(double *values, int size) {
+int sampleMultinomial(double *values, int size) {
   double *cumulatives = (double *)realloc(NULL, size * sizeof(double));
 
   cumulatives[0] = values[0];
@@ -24,11 +24,11 @@ int sample_multinomial(double *values, int size) {
 
   // Get random number up to total
   double total = cumulatives[size - 1];
-  double random_num = (float)rand() / RAND_MAX * total;
+  double randomNum = (float)rand() / RAND_MAX * total;
 
   // Get index of first cumulative value exceeding random number
   int index = 0;
-  while (index < size && random_num >= cumulatives[index]) {
+  while (index < size && randomNum >= cumulatives[index]) {
     index++;
   }
 
@@ -36,10 +36,10 @@ int sample_multinomial(double *values, int size) {
   return index;
 }
 
-#define char_to_index(char) (char - 'a' + 1)
-#define index_to_char(index) ('a' + index - 1)
+#define CHAR_TO_INDEX(char) (char - 'a' + 1)
+#define INDEX_TO_CHAR(index) ('a' + index - 1)
 
-void run_bigram() {
+void runBigram() {
   srand(0);
   double bigram[ALPHABET_SIZE][ALPHABET_SIZE] = {0};
 
@@ -56,16 +56,16 @@ void run_bigram() {
 
     while (getline(&line, &len, stream) != -1) {
       // Add start token
-      bigram[0][char_to_index(line[0])] += 1;
+      bigram[0][CHAR_TO_INDEX(line[0])] += 1;
 
       // Add characters
       int i;
       for (i = 1; line[i] != '\0'; i++) {
-        bigram[char_to_index(line[i - 1])][char_to_index(line[i])] += 1;
+        bigram[CHAR_TO_INDEX(line[i - 1])][CHAR_TO_INDEX(line[i])] += 1;
       }
 
       // Add end token
-      bigram[char_to_index(line[i - 2])][0] += 1;
+      bigram[CHAR_TO_INDEX(line[i - 2])][0] += 1;
     }
 
     free(line);
@@ -90,7 +90,7 @@ void run_bigram() {
     }
   }
 
-  print_bigram(bigram);
+  printBigram(bigram);
 
   // Sample from bigram
   const int NUM_SAMPLES = 10;
@@ -98,11 +98,11 @@ void run_bigram() {
     int index = 0;
     while (1) {
       double *row = bigram[index];
-      index = sample_multinomial(row, ALPHABET_SIZE);
+      index = sampleMultinomial(row, ALPHABET_SIZE);
       if (index == 0) {
         break;
       }
-      printf("%c", index_to_char(index));
+      printf("%c", INDEX_TO_CHAR(index));
     }
     printf("\n");
   }
@@ -110,19 +110,19 @@ void run_bigram() {
   // Calculate negative log likelihood
   {
     char *test = "andrejq";
-    double log_likelihood = 0;
+    double logLikelihood = 0;
     double n = 0;
     {
-      log_likelihood += log(bigram[0][char_to_index(test[0])]);
+      logLikelihood += log(bigram[0][CHAR_TO_INDEX(test[0])]);
       int i;
       for (i = 1; test[i] != '\0'; i++) {
-        log_likelihood +=
-            log(bigram[char_to_index(test[i - 1])][char_to_index(test[i])]);
+        logLikelihood +=
+            log(bigram[CHAR_TO_INDEX(test[i - 1])][CHAR_TO_INDEX(test[i])]);
       }
-      log_likelihood += log(bigram[char_to_index(test[i - 2])][0]);
+      logLikelihood += log(bigram[CHAR_TO_INDEX(test[i - 2])][0]);
       n += i + 1;
     }
-    double negative_log_likelihood = -log_likelihood;
+    double negative_log_likelihood = -logLikelihood;
     printf("nll = %f\n", negative_log_likelihood);
     printf("nll/n = %f\n", negative_log_likelihood / n);
   }
@@ -137,7 +137,7 @@ typedef struct Value {
   struct Value *rightChild;
 } Value;
 
-Value *init_value(double data, char *label) {
+Value *initValue(double data, char *label) {
   Value *value = (Value *)realloc(NULL, sizeof(Value));
   value->data = data;
   value->label = label;
@@ -146,27 +146,27 @@ Value *init_value(double data, char *label) {
   return value;
 }
 
-Value *init_binary_value(double data, char *label, Value *leftChild,
-                         Value *rightChild) {
-  Value *value = init_value(data, label);
+Value *initBinaryValue(double data, char *label, Value *leftChild,
+                       Value *rightChild) {
+  Value *value = initValue(data, label);
   value->leftChild = leftChild;
   value->rightChild = rightChild;
   return value;
 }
 
-Value *value_add(Value *value1, Value *value2) {
+Value *valueAdd(Value *value1, Value *value2) {
   Value *result =
-      init_binary_value(value1->data + value2->data, "+", value1, value2);
+      initBinaryValue(value1->data + value2->data, "+", value1, value2);
   return result;
 }
 
 Value *valueTimes(Value *value1, Value *value2) {
   Value *result =
-      init_binary_value(value1->data * value2->data, "*", value1, value2);
+      initBinaryValue(value1->data * value2->data, "*", value1, value2);
   return result;
 }
 
-void print_value(Value *value, int depth) {
+void printValue(Value *value, int depth) {
   if (value == NULL) {
     return;
   }
@@ -174,39 +174,38 @@ void print_value(Value *value, int depth) {
 
   if (value->leftChild != NULL) {
     printf("%*s", (depth + 1) * 4, " ");
-    print_value(value->leftChild, depth + 1);
+    printValue(value->leftChild, depth + 1);
   }
 
   if (value->rightChild != NULL) {
     printf("%*s", (depth + 1) * 4, " ");
-    print_value(value->rightChild, depth + 1);
+    printValue(value->rightChild, depth + 1);
   }
 }
 
-void free_value(Value *value) {
+void freeValue(Value *value) {
   if (value == NULL) {
     return;
   }
 
-  free_value(value->leftChild);
-  free_value(value->rightChild);
+  freeValue(value->leftChild);
+  freeValue(value->rightChild);
 
   free(value);
 }
 
 int main() {
-  Value *x1 = init_value(2.0, "x1");
-  Value *x2 = init_value(0.0, "x2");
+  Value *x1 = initValue(2.0, "x1");
+  Value *x2 = initValue(0.0, "x2");
 
-  Value *w1 = init_value(-3.0, "w1");
-  Value *w2 = init_value(1.0, "w2");
+  Value *w1 = initValue(-3.0, "w1");
+  Value *w2 = initValue(1.0, "w2");
 
-  Value *b = init_value(6.88113735870195432, "b");
+  Value *b = initValue(6.88113735870195432, "b");
 
-  Value *result =
-      value_add(value_add(valueTimes(x1, w1), valueTimes(x2, w2)), b);
+  Value *result = valueAdd(valueAdd(valueTimes(x1, w1), valueTimes(x2, w2)), b);
 
-  print_value(result, 0);
+  printValue(result, 0);
 
-  free_value(result);
+  freeValue(result);
 }
