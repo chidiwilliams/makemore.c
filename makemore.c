@@ -76,7 +76,7 @@ void bigram_free(double **bigram) {
   free(bigram);
 }
 
-int sample_multinomial(double *values, int size);
+static int sample_multinomial(double *values, int size);
 
 void bigram_sample(double **bigram) {
   int index = 0;
@@ -118,7 +118,7 @@ double bigram_average_nll(double **bigram, char **words, int num_words) {
   return nll / n;
 }
 
-int sample_multinomial(double *values, int size) {
+static int sample_multinomial(double *values, int size) {
   double *cumulatives = (double *)allocate(size * sizeof(double));
 
   cumulatives[0] = values[0];
@@ -140,7 +140,7 @@ int sample_multinomial(double *values, int size) {
   return index;
 }
 
-Value *value_init(double data, enum ValueType type) {
+static Value *value_init(double data, enum ValueType type) {
   Value *value = (Value *)allocate(sizeof(Value));
   value->data = data;
   value->label = NULL;
@@ -159,15 +159,15 @@ Value *value_init_constant_with_label(double data, char *label) {
   return value;
 }
 
-Value *value_init_binary(double data, enum ValueType type, Value *leftChild,
-                         Value *rightChild) {
+static Value *value_init_binary(double data, enum ValueType type,
+                                Value *leftChild, Value *rightChild) {
   Value *value = value_init(data, type);
   value->left_child = leftChild;
   value->right_child = rightChild;
   return value;
 }
 
-Value *value_init_unary(double data, enum ValueType type, Value *child) {
+static Value *value_init_unary(double data, enum ValueType type, Value *child) {
   Value *value = value_init(data, type);
   value->left_child = child;
   return value;
@@ -190,7 +190,7 @@ Value *value_tanh(Value *value) {
   return result;
 }
 
-void value_backward(Value *value) {
+static void value_backward(Value *value) {
   switch (value->type) {
   case CONSTANT: {
     break;
@@ -214,7 +214,7 @@ void value_backward(Value *value) {
   }
 }
 
-void value_print(Value *value) {
+static void value_print(Value *value) {
   char *label;
   switch (value->type) {
   case CONSTANT:
@@ -234,7 +234,7 @@ void value_print(Value *value) {
   printf("[%4s | %f | %f]\n", label, value->data, value->grad);
 }
 
-void value_print_tree_at_depth(Value *value, int depth) {
+static void value_print_tree_at_depth(Value *value, int depth) {
   if (value == NULL) {
     return;
   }
@@ -254,25 +254,26 @@ void value_print_tree_at_depth(Value *value, int depth) {
 
 void value_print_tree(Value *value) { value_print_tree_at_depth(value, 0); }
 
-typedef struct ValueItem {
+typedef struct ValueListNode {
   Value *value;
-  struct ValueItem *next;
-} ValueItem;
+  struct ValueListNode *next;
+} ValueListNode;
 
-ValueItem *valueitem_init(Value *value) {
-  ValueItem *item = (ValueItem *)allocate(sizeof(ValueItem));
+static ValueListNode *valueitem_init(Value *value) {
+  ValueListNode *item = (ValueListNode *)allocate(sizeof(ValueListNode));
   item->value = value;
   item->next = NULL;
   return item;
 }
 
-void sort_topological(ValueItem **sorted, ValueItem **visited, Value *value) {
+static void sort_topological(ValueListNode **sorted, ValueListNode **visited,
+                             Value *value) {
   if (value == NULL) {
     return;
   }
 
   if (*visited != NULL) {
-    ValueItem *current = *visited;
+    ValueListNode *current = *visited;
     while (current->next != NULL) {
       if (current->value == value) {
         return;
@@ -281,11 +282,11 @@ void sort_topological(ValueItem **sorted, ValueItem **visited, Value *value) {
     }
   }
 
-  ValueItem *visitedItem = valueitem_init(value);
+  ValueListNode *visitedItem = valueitem_init(value);
   if (*visited == NULL) {
     *visited = visitedItem;
   } else {
-    ValueItem *current = *visited;
+    ValueListNode *current = *visited;
     while (current->next != NULL) {
       current = current->next;
     }
@@ -295,7 +296,7 @@ void sort_topological(ValueItem **sorted, ValueItem **visited, Value *value) {
   sort_topological(sorted, visited, value->left_child);
   sort_topological(sorted, visited, value->right_child);
 
-  ValueItem *sortedItem = valueitem_init(value);
+  ValueListNode *sortedItem = valueitem_init(value);
   if (*sorted == NULL) {
     *sorted = sortedItem;
   } else {
@@ -304,7 +305,7 @@ void sort_topological(ValueItem **sorted, ValueItem **visited, Value *value) {
   }
 }
 
-void valueitem_free(ValueItem *valueItem) {
+static void valueitem_free(ValueListNode *valueItem) {
   if (valueItem == NULL) {
     return;
   }
@@ -313,14 +314,15 @@ void valueitem_free(ValueItem *valueItem) {
 }
 
 void value_backward_tree(Value *value) {
-  ValueItem *sorted = NULL;
-  ValueItem *visited = NULL;
+  ValueListNode *sorted = NULL;
+  ValueListNode *visited = NULL;
 
   sort_topological(&sorted, &visited, value);
 
   value->grad = 1;
 
-  for (ValueItem *current = sorted; current != NULL; current = current->next) {
+  for (ValueListNode *current = sorted; current != NULL;
+       current = current->next) {
     value_backward(current->value);
   }
 
@@ -349,7 +351,7 @@ void value_free(Value *value) {
 
 #define RANDOM_WEIGHT() ((double)random() / (double)RAND_MAX)
 
-Neuron *neuron_init(int num_inputs) {
+static Neuron *neuron_init(int num_inputs) {
   Neuron *neuron = (Neuron *)allocate(sizeof(Neuron));
   neuron->num_inputs = num_inputs;
   neuron->b = value_init_constant(RANDOM_WEIGHT());
@@ -362,7 +364,7 @@ Neuron *neuron_init(int num_inputs) {
   return neuron;
 }
 
-void neuron_free(Neuron *neuron) {
+static void neuron_free(Neuron *neuron) {
   for (int i = 0; i < neuron->num_inputs; i++) {
     value_free_tree(neuron->w[i]);
   }
@@ -371,7 +373,7 @@ void neuron_free(Neuron *neuron) {
   free(neuron);
 }
 
-void neuron_print(Neuron *neuron) {
+static void neuron_print(Neuron *neuron) {
   for (int i = 0; i < neuron->num_inputs; i++) {
     printf("%4d: ", i);
     value_print(neuron->w[i]);
@@ -380,7 +382,7 @@ void neuron_print(Neuron *neuron) {
   value_print(neuron->b);
 }
 
-Value *neuron_apply(Neuron *neuron, Value **inputs) {
+static Value *neuron_apply(Neuron *neuron, Value **inputs) {
   Value *activation = value_times(neuron->w[0], inputs[0]);
   for (int i = 1; i < neuron->num_inputs; i++) {
     activation = value_add(activation, value_times(neuron->w[i], inputs[i]));
@@ -389,7 +391,7 @@ Value *neuron_apply(Neuron *neuron, Value **inputs) {
   return value_tanh(activation);
 }
 
-Layer *layer_init(int num_inputs, int num_outputs) {
+static Layer *layer_init(int num_inputs, int num_outputs) {
   Layer *layer = (Layer *)allocate(sizeof(Layer));
   layer->num_inputs = num_inputs;
   layer->num_outputs = num_outputs;
@@ -400,7 +402,7 @@ Layer *layer_init(int num_inputs, int num_outputs) {
   return layer;
 }
 
-void layer_free(Layer *layer) {
+static void layer_free(Layer *layer) {
   for (int i = 0; i < layer->num_outputs; i++) {
     neuron_free(layer->neurons[i]);
   }
@@ -408,7 +410,7 @@ void layer_free(Layer *layer) {
   free(layer);
 }
 
-Value **layer_apply(Layer *layer, Value **inputs) {
+static Value **layer_apply(Layer *layer, Value **inputs) {
   Value **outputs = (Value **)allocate(layer->num_outputs * sizeof(Value *));
   for (int i = 0; i < layer->num_outputs; i++) {
     outputs[i] = neuron_apply(layer->neurons[i], inputs);
