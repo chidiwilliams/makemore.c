@@ -175,6 +175,10 @@ void test_mlp_loss() {
     }
   }
 
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    value_free(outputs[i]);
+  }
+
   mlp_free(mlp);
 }
 
