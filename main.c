@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 void test_bigram() {
@@ -26,7 +27,7 @@ void test_bigram() {
 
   bigram_normalize(bigram);
 
-  bigram_print(bigram);
+  // bigram_print(bigram);
 
   // Sample from bigram
   const int num_samples = 10;
@@ -38,7 +39,7 @@ void test_bigram() {
   double num_test_words =
       (double)sizeof(test_words) / (double)sizeof(test_words[0]);
   double average_nll = bigram_average_nll(bigram, test_words, num_test_words);
-  printf("nll/n = %f\n", average_nll);
+  // printf("nll/n = %f\n", average_nll);
 
   bigram_free(bigram);
 }
@@ -177,8 +178,24 @@ void test_mlp_loss() {
   mlp_free(mlp);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
   srand(0);
-  test_mlp_loss();
+
+  char *type = NULL;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--type") == 0) {
+      type = argv[i + 1];
+      i++;
+    }
+  }
+
+  printf("%s", type);
+
+  if (type != NULL && (strcmp(type, "bigram") == 0)) {
+    test_bigram();
+  } else {
+    // test_mlp_loss();
+  }
+
   return 0;
 }
