@@ -40,11 +40,20 @@ typedef struct Neuron {
   Value *b;
 } Neuron;
 
+Neuron *neuron_init(int num_inputs);
+void neuron_free(Neuron *neuron);
+void neuron_print(Neuron *neuron);
+Value *neuron_apply(Neuron *neuron, Value **inputs);
+
 typedef struct Layer {
   int num_inputs;
   int num_outputs;
   Neuron **neurons;
 } Layer;
+
+Layer *layer_init(int num_inputs, int num_outputs);
+void layer_free(Layer *layer);
+Value **layer_apply(Layer *layer, Value **inputs);
 
 typedef struct MLP {
   int num_layers;

@@ -1,6 +1,7 @@
 #include "makemore.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void *allocate(size_t size) {
   void *result = malloc(size);
@@ -363,7 +364,7 @@ void value_free(Value *value) {
 
 #define RANDOM_WEIGHT() ((double)random() / (double)RAND_MAX)
 
-static Neuron *neuron_init(int num_inputs) {
+Neuron *neuron_init(int num_inputs) {
   Neuron *neuron = (Neuron *)allocate(sizeof(Neuron));
   neuron->num_inputs = num_inputs;
   neuron->b = value_init_constant(RANDOM_WEIGHT());
@@ -376,7 +377,7 @@ static Neuron *neuron_init(int num_inputs) {
   return neuron;
 }
 
-static void neuron_free(Neuron *neuron) {
+void neuron_free(Neuron *neuron) {
   for (int i = 0; i < neuron->num_inputs; i++) {
     value_free_tree(neuron->w[i]);
   }
@@ -385,7 +386,7 @@ static void neuron_free(Neuron *neuron) {
   free(neuron);
 }
 
-static void neuron_print(Neuron *neuron) {
+void neuron_print(Neuron *neuron) {
   for (int i = 0; i < neuron->num_inputs; i++) {
     printf("%4d: ", i);
     value_print(neuron->w[i]);
@@ -394,7 +395,7 @@ static void neuron_print(Neuron *neuron) {
   value_print(neuron->b);
 }
 
-static Value *neuron_apply(Neuron *neuron, Value **inputs) {
+Value *neuron_apply(Neuron *neuron, Value **inputs) {
   Value *activation = value_times(neuron->w[0], inputs[0]);
   for (int i = 1; i < neuron->num_inputs; i++) {
     activation = value_add(activation, value_times(neuron->w[i], inputs[i]));
@@ -403,7 +404,7 @@ static Value *neuron_apply(Neuron *neuron, Value **inputs) {
   return value_tanh(activation);
 }
 
-static Layer *layer_init(int num_inputs, int num_outputs) {
+Layer *layer_init(int num_inputs, int num_outputs) {
   Layer *layer = (Layer *)allocate(sizeof(Layer));
   layer->num_inputs = num_inputs;
   layer->num_outputs = num_outputs;
@@ -414,7 +415,7 @@ static Layer *layer_init(int num_inputs, int num_outputs) {
   return layer;
 }
 
-static void layer_free(Layer *layer) {
+void layer_free(Layer *layer) {
   for (int i = 0; i < layer->num_outputs; i++) {
     neuron_free(layer->neurons[i]);
   }
@@ -422,7 +423,7 @@ static void layer_free(Layer *layer) {
   free(layer);
 }
 
-static Value **layer_apply(Layer *layer, Value **inputs) {
+Value **layer_apply(Layer *layer, Value **inputs) {
   Value **outputs = (Value **)allocate(layer->num_outputs * sizeof(Value *));
   for (int i = 0; i < layer->num_outputs; i++) {
     outputs[i] = neuron_apply(layer->neurons[i], inputs);
