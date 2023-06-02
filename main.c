@@ -121,7 +121,9 @@ void test_mlp_loss() {
     Value **predicted_outputs =
         (Value **)allocate(NUM_SAMPLES * sizeof(Value *));
     for (int s = 0; s < NUM_SAMPLES; s++) {
-      predicted_outputs[s] = mlp_apply(mlp, inputs[s])[0];
+      Value **predicted_outputs_for_input = mlp_apply(mlp, inputs[s]);
+      predicted_outputs[s] = predicted_outputs_for_input[0];
+      free(predicted_outputs_for_input);
     }
 
     Value *loss = value_init_constant(0);
