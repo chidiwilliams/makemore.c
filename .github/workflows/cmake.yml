@@ -7,7 +7,7 @@ on:
     branches: ["main"]
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   build:
@@ -25,3 +25,4 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install valgrind
 
       - run: valgrind --leak-check=yes ./build/makemore --type bigram
+      - run: valgrind --leak-check=yes ./build/makemore

@@ -189,12 +189,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("%s", type);
-
   if (type != NULL && (strcmp(type, "bigram") == 0)) {
     test_bigram();
   } else {
-    // test_mlp_loss();
+    test_mlp_loss();
   }
 
   return 0;
