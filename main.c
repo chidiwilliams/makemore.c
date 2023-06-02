@@ -73,16 +73,105 @@ void test_mlp() {
 
   MLP *mlp = mlp_init(num_inputs, layer_outputs, num_layer_outputs);
 
-  Value **results = mlp_apply(mlp, inputs);
+  Value **outputs = mlp_apply(mlp, inputs);
 
-  int num_results = layer_outputs[num_layer_outputs - 1];
+  int num_outputs = layer_outputs[num_layer_outputs - 1];
 
-  for (int i = 0; i < num_results; i++) {
-    value_print_tree(results[i]);
+  for (int i = 0; i < num_outputs; i++) {
+    value_print_tree(outputs[i]);
   }
 
-  for (int i = 0; i < num_results; i++) {
-    value_free(results[i]);
+  for (int i = 0; i < num_outputs; i++) {
+    value_free(outputs[i]);
+  }
+
+  mlp_free(mlp);
+}
+
+void print_values(Value **values, int num_values) {
+  for (int i = 0; i < num_values; i++) {
+    value_print(values[i]);
+  }
+}
+
+void test_mlp_loss() {
+#define NUM_INPUTS 3
+#define NUM_LAYERS 3
+#define NUM_SAMPLES 4
+#define NUM_TRAINING_RUNS 300
+
+  int layer_outputs[NUM_LAYERS] = {4, 4, 1};
+  int num_outputs = layer_outputs[NUM_LAYERS - 1];
+  MLP *mlp = mlp_init(NUM_INPUTS, layer_outputs, NUM_LAYERS);
+
+  Value *inputs[NUM_SAMPLES][NUM_INPUTS] = {
+      {value_init_constant(2), value_init_constant(3), value_init_constant(-1)},
+      {value_init_constant(3), value_init_constant(-1),
+       value_init_constant(0.5)},
+      {value_init_constant(0.5), value_init_constant(1),
+       value_init_constant(1)},
+      {value_init_constant(1), value_init_constant(1),
+       value_init_constant(-1)}};
+  Value *outputs[NUM_SAMPLES] = {
+      value_init_constant(1), value_init_constant(-1), value_init_constant(-1),
+      value_init_constant(1)};
+
+  for (int r = 0; r < NUM_TRAINING_RUNS; r++) {
+    Value **predicted_outputs =
+        (Value **)allocate(NUM_SAMPLES * sizeof(Value *));
+    for (int s = 0; s < NUM_SAMPLES; s++) {
+      predicted_outputs[s] = mlp_apply(mlp, inputs[s])[0];
+    }
+
+    Value *loss = value_init_constant(0);
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+      loss = value_add(loss,
+                       value_pow(value_minus(predicted_outputs[i], outputs[i]),
+                                 value_init_constant(2)));
+    }
+
+    value_backward_tree(loss);
+
+    printf("%3d: ", r);
+    value_print(loss);
+
+#define LEARNING_RATE -0.001
+    for (int i = 0; i < mlp->num_layers; i++) {
+      Layer *layer = mlp->layers[i];
+      for (int j = 0; j < layer->num_outputs; j++) {
+        Neuron *neuron = layer->neurons[j];
+        for (int k = 0; k < neuron->num_inputs; k++) {
+          neuron->w[k]->data += LEARNING_RATE * neuron->w[k]->grad;
+        }
+        neuron->b->data += LEARNING_RATE * neuron->b->grad;
+      }
+    }
+
+    value_free(loss);
+
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+      value_free(predicted_outputs[i]);
+    }
+    free(predicted_outputs);
+  }
+
+  for (int s = 0; s < NUM_SAMPLES; s++) {
+    Value **predicted_outputs = mlp_apply(mlp, inputs[s]);
+    printf("Input: \n");
+    print_values(inputs[s], NUM_INPUTS);
+    printf("Predicted: \n");
+    print_values(predicted_outputs, num_outputs);
+
+    for (int i = 0; i < num_outputs; i++) {
+      value_free(predicted_outputs[i]);
+    }
+    free(predicted_outputs);
+  }
+
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    for (int j = 0; j < NUM_INPUTS; j++) {
+      value_free(inputs[i][j]);
+    }
   }
 
   mlp_free(mlp);
@@ -90,6 +179,6 @@ void test_mlp() {
 
 int main() {
   srand(0);
-  test_bigram();
+  test_mlp_loss();
   return 0;
 }

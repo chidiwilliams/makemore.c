@@ -1,3 +1,7 @@
+#include <stdlib.h>
+
+void *allocate(size_t size);
+
 double **bigram_init();
 void bigram_add_word(double **bigram, char *word, int num_chars);
 void bigram_print(double **bigram);
@@ -6,7 +10,7 @@ void bigram_sample(double **bigram);
 double bigram_average_nll(double **bigram, char **words, int num_words);
 void bigram_free(double **bigram);
 
-enum ValueType { CONSTANT, ADD, MULTIPLY, TANH };
+enum ValueType { CONSTANT, ADD, MULTIPLY, TANH, POW };
 
 typedef struct Value {
   enum ValueType type;
@@ -20,10 +24,13 @@ typedef struct Value {
 Value *value_init_constant(double data);
 Value *value_init_constant_with_label(double data, char *label);
 Value *value_add(Value *value1, Value *value2);
+Value *value_minus(Value *value1, Value *value2);
 Value *value_times(Value *value1, Value *value2);
+Value *value_pow(Value *value, Value *power);
 Value *value_tanh(Value *value);
 void value_backward_tree(Value *value);
 void value_print_tree(Value *value);
+void value_print(Value *value);
 void value_free_tree(Value *value);
 void value_free(Value *value);
 

@@ -1,7 +1,6 @@
 #include "makemore.h"
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 void *allocate(size_t size) {
   void *result = malloc(size);
@@ -174,20 +173,24 @@ static Value *value_init_unary(double data, enum ValueType type, Value *child) {
 }
 
 Value *value_add(Value *value1, Value *value2) {
-  Value *result =
-      value_init_binary(value1->data + value2->data, ADD, value1, value2);
-  return result;
+  return value_init_binary(value1->data + value2->data, ADD, value1, value2);
+}
+
+Value *value_minus(Value *value1, Value *value2) {
+  return value_add(value1, value_init_constant(-value2->data));
 }
 
 Value *value_times(Value *value1, Value *value2) {
-  Value *result =
-      value_init_binary(value1->data * value2->data, MULTIPLY, value1, value2);
-  return result;
+  return value_init_binary(value1->data * value2->data, MULTIPLY, value1,
+                           value2);
 }
 
 Value *value_tanh(Value *value) {
-  Value *result = value_init_unary(tanh(value->data), TANH, value);
-  return result;
+  return value_init_unary(tanh(value->data), TANH, value);
+}
+
+Value *value_pow(Value *value, Value *power) {
+  return value_init_binary(pow(value->data, power->data), POW, value, power);
 }
 
 static void value_backward(Value *value) {
@@ -196,25 +199,32 @@ static void value_backward(Value *value) {
     break;
   }
   case ADD: {
-    value->left_child->grad = 1.0 * value->grad;
-    value->right_child->grad = 1.0 * value->grad;
+    value->left_child->grad += 1.0 * value->grad;
+    value->right_child->grad += 1.0 * value->grad;
     break;
   }
   case MULTIPLY: {
-    value->left_child->grad = value->right_child->data * value->grad;
-    value->right_child->grad = value->left_child->data * value->grad;
+    value->left_child->grad += value->right_child->data * value->grad;
+    value->right_child->grad += value->left_child->data * value->grad;
     break;
   }
   case TANH: {
     double d = value->left_child->data;
     double t = (exp(2 * d) - 1) / (exp(2 * d) + 1);
-    value->left_child->grad = (1 - pow(t, 2)) * value->grad;
+    value->left_child->grad += (1 - pow(t, 2)) * value->grad;
+    break;
+  }
+  case POW: {
+    value->left_child->grad +=
+        value->right_child->data *
+        pow(value->left_child->data, value->right_child->data - 1) *
+        value->grad;
     break;
   }
   }
 }
 
-static void value_print(Value *value) {
+void value_print(Value *value) {
   char *label;
   switch (value->type) {
   case CONSTANT:
@@ -229,6 +239,8 @@ static void value_print(Value *value) {
   case TANH:
     label = "tanh";
     break;
+  case POW:
+    label = "pow";
   }
 
   printf("[%4s | %f | %f]\n", label, value->data, value->grad);
