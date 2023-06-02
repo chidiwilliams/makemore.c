@@ -22,6 +22,6 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
-      - run: apt-get update && apt-get install valgrind
+      - run: sudo apt-get update && sudo apt-get install valgrind
 
       - run: valgrind
