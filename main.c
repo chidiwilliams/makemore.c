@@ -207,6 +207,7 @@ void layer_free_result(Layer *layer, Value **outputs) {
   for (int i = 0; i < layer->num_outputs; i++) {
     neuron_free_result(layer->neurons[i], outputs[i]);
   }
+  free(outputs);
 }
 
 int main(int argc, char *argv[]) {
