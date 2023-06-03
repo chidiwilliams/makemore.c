@@ -446,11 +446,17 @@ MLP *mlp_init(int num_inputs, int *layer_outputs, int num_layer_outputs) {
 }
 
 Value **mlp_apply(MLP *mlp, Value **inputs) {
-  Value **results = inputs;
+  Value **outputs = inputs;
   for (int i = 0; i < mlp->num_layers; i++) {
-    results = layer_apply(mlp->layers[i], results);
+    Value **next_results = layer_apply(mlp->layers[i], outputs);
+    // If results was from a previous layer, free the array (but not the
+    // contents)
+    if (i > 0) {
+      free(outputs);
+    }
+    outputs = next_results;
   }
-  return results;
+  return outputs;
 }
 
 void mlp_free(MLP *mlp) {

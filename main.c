@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
   } else {
 #define num_layer_outputs 2
 #define num_inputs 2
-    int layer_outputs[num_layer_outputs] = {2, 1};
+    int layer_outputs[num_layer_outputs] = {2, 2};
 
     Value *inputs[num_inputs] = {value_init_constant(1),
                                  value_init_constant(2)};
