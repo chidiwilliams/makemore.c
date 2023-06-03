@@ -367,11 +367,11 @@ void value_free(Value *value) {
 Neuron *neuron_init(int num_inputs) {
   Neuron *neuron = (Neuron *)allocate(sizeof(Neuron));
   neuron->num_inputs = num_inputs;
-  neuron->b = value_init_constant(RANDOM_WEIGHT());
+  neuron->b = value_init_constant_with_label(RANDOM_WEIGHT(), "b");
 
   Value **w = (Value **)allocate(num_inputs * sizeof(Value));
   for (int i = 0; i < num_inputs; i++) {
-    w[i] = value_init_constant(RANDOM_WEIGHT());
+    w[i] = value_init_constant_with_label(RANDOM_WEIGHT(), "w");
   }
   neuron->w = w;
   return neuron;
