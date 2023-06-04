@@ -326,7 +326,7 @@ static void valueitem_free(ValueListNode *valueItem) {
   if (valueItem == NULL) {
     return;
   }
-  free(valueItem->next);
+  valueitem_free(valueItem->next);
   free(valueItem);
 }
 

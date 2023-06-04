@@ -95,95 +95,6 @@ void print_values(Value **values, int num_values) {
   }
 }
 
-void test_mlp_loss() {
-#define NUM_INPUTS 3
-#define NUM_LAYERS 2
-#define NUM_SAMPLES 4
-#define NUM_TRAINING_RUNS 1
-
-  int layer_outputs[NUM_LAYERS] = {1, 1};
-  int num_outputs = layer_outputs[NUM_LAYERS - 1];
-  MLP *mlp = mlp_init(NUM_INPUTS, layer_outputs, NUM_LAYERS);
-
-  Value *inputs[NUM_SAMPLES][NUM_INPUTS] = {
-      {value_init_constant(2), value_init_constant(3), value_init_constant(-1)},
-      {value_init_constant(3), value_init_constant(-1),
-       value_init_constant(0.5)},
-      {value_init_constant(0.5), value_init_constant(1),
-       value_init_constant(1)},
-      {value_init_constant(1), value_init_constant(1),
-       value_init_constant(-1)}};
-  Value *outputs[NUM_SAMPLES] = {
-      value_init_constant(1), value_init_constant(-1), value_init_constant(-1),
-      value_init_constant(1)};
-
-  for (int r = 0; r < NUM_TRAINING_RUNS; r++) {
-    Value **predicted_outputs =
-        (Value **)allocate(NUM_SAMPLES * sizeof(Value *));
-    for (int s = 0; s < NUM_SAMPLES; s++) {
-      Value **predicted_outputs_for_input = mlp_apply(mlp, inputs[s]);
-      predicted_outputs[s] = predicted_outputs_for_input[0];
-      free(predicted_outputs_for_input);
-    }
-
-    Value *loss = value_init_constant(0);
-    for (int i = 0; i < NUM_SAMPLES; i++) {
-      loss = value_add(loss,
-                       value_pow(value_minus(predicted_outputs[i], outputs[i]),
-                                 value_init_constant(2)));
-    }
-
-    value_backward_tree(loss);
-
-    printf("%3d: ", r);
-    value_print_tree(loss);
-
-#define LEARNING_RATE -0.001
-    for (int i = 0; i < mlp->num_layers; i++) {
-      Layer *layer = mlp->layers[i];
-      for (int j = 0; j < layer->num_outputs; j++) {
-        Neuron *neuron = layer->neurons[j];
-        for (int k = 0; k < neuron->num_inputs; k++) {
-          neuron->w[k]->data += LEARNING_RATE * neuron->w[k]->grad;
-        }
-        neuron->b->data += LEARNING_RATE * neuron->b->grad;
-      }
-    }
-
-    // TODO: free up until the MLP
-    value_free(loss);
-
-    // TODO: this should be freed in the loss
-    for (int i = 0; i < NUM_SAMPLES; i++) {
-      value_free(predicted_outputs[i]);
-    }
-    free(predicted_outputs);
-  }
-
-  // for (int s = 0; s < NUM_SAMPLES; s++) {
-  //   Value **predicted_outputs = mlp_apply(mlp, inputs[s]);
-  //   // printf("Predicted: \n");
-  //   // print_values(predicted_outputs, num_outputs);
-  //
-  //   for (int i = 0; i < num_outputs; i++) {
-  //     value_free(predicted_outputs[i]);
-  //   }
-  //   free(predicted_outputs);
-  // }
-
-  for (int i = 0; i < NUM_SAMPLES; i++) {
-    for (int j = 0; j < NUM_INPUTS; j++) {
-      value_free(inputs[i][j]);
-    }
-  }
-
-  for (int i = 0; i < NUM_SAMPLES; i++) {
-    value_free(outputs[i]);
-  }
-
-  mlp_free(mlp);
-}
-
 void neuron_free_weight_result(Value *value, int num_inputs_left) {
   if (num_inputs_left == 0) {
     value_free(value);
@@ -266,38 +177,101 @@ void mlp_free_outputs(MLP *mlp, Value **outputs) {
   mlp_layer_free_result(output_layer, outputs, mlp->num_layers - 1, mlp);
 }
 
-void free_loss_sum() {}
-
-void free_loss(Value *loss, int depth) {
+void free_loss(Value *loss_sum, int depth) {
   if (depth == 0) {
+    value_free(loss_sum);
     return;
   }
 
-  free_loss(loss->left_child, depth - 1);
+  free_loss(loss_sum->left_child, depth - 1);
 
-  Value *pow_value = loss->right_child;
+  Value *pow_value = loss_sum->right_child;
   Value *sum_value = pow_value->left_child;
   Value *exponent_value = pow_value->right_child;
   Value *negate_value = sum_value->right_child;
   Value *minus_one_value = negate_value->right_child;
 
-  value_print(minus_one_value);
-  free(minus_one_value);
+  value_free(minus_one_value);
+  value_free(negate_value);
+  value_free(sum_value);
+  value_free(exponent_value);
+  value_free(pow_value);
+  value_free(loss_sum);
+}
 
-  value_print(negate_value);
-  free(negate_value);
+void test_mlp_loss() {
+#define NUM_LAYER_OUTPUTS 3
+#define NUM_INPUTS 3
+#define NUM_SAMPLES 4
+  int layer_outputs[NUM_LAYER_OUTPUTS] = {4, 4, 1};
+  Value *inputs[NUM_SAMPLES][NUM_INPUTS] = {
+      {value_init_constant(2), value_init_constant(3), value_init_constant(-1)},
+      {value_init_constant(3), value_init_constant(-1),
+       value_init_constant(0.5)},
+      {value_init_constant(0.5), value_init_constant(1),
+       value_init_constant(1)},
+      {value_init_constant(1), value_init_constant(1), value_init_constant(-1)},
+  };
+  Value *outputs[NUM_SAMPLES] = {
+      value_init_constant(1),
+      value_init_constant(-1),
+      value_init_constant(-1),
+      value_init_constant(1),
+  };
 
-  value_print(sum_value);
-  free(sum_value);
+  MLP *mlp = mlp_init(NUM_INPUTS, layer_outputs, NUM_LAYER_OUTPUTS);
 
-  value_print(exponent_value);
-  free(exponent_value);
+#define NUM_TRAINING_RUNS 1
+  for (int x = 0; x < NUM_TRAINING_RUNS; x++) {
+    Value ***sample_outputs =
+        (Value ***)allocate(NUM_SAMPLES * sizeof(Value **));
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+      Value **outputs = mlp_apply(mlp, inputs[i]);
+      sample_outputs[i] = outputs;
+    }
 
-  value_print(pow_value);
-  free(pow_value);
+    Value *loss = value_init_constant(0);
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+      loss = value_add(loss,
+                       value_pow(value_minus(sample_outputs[i][0], outputs[i]),
+                                 value_init_constant(2)));
+    }
 
-  value_print(loss);
-  free(loss);
+    value_backward_tree(loss);
+
+#define LEARNING_RATE -0.01
+    for (int i = 0; i < mlp->num_layers; i++) {
+      Layer *layer = mlp->layers[i];
+      for (int j = 0; j < layer->num_outputs; j++) {
+        Neuron *neuron = layer->neurons[j];
+        for (int k = 0; k < neuron->num_inputs; k++) {
+          neuron->w[k]->data += LEARNING_RATE * neuron->w[k]->grad;
+        }
+        neuron->b->data += LEARNING_RATE * neuron->b->grad;
+      }
+    }
+
+    value_print(loss);
+
+    free_loss(loss, NUM_SAMPLES);
+
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+      mlp_free_outputs(mlp, sample_outputs[i]);
+    }
+    free(sample_outputs);
+  }
+
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    value_free(outputs[i]);
+  }
+
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    for (int j = 0; j < NUM_INPUTS; j++) {
+      value_free(inputs[i][j]);
+    }
+  }
+
+  mlp_free(mlp);
 }
 
 int main(int argc, char *argv[]) {
@@ -314,60 +288,7 @@ int main(int argc, char *argv[]) {
   if (type != NULL && (strcmp(type, "bigram") == 0)) {
     test_bigram();
   } else {
-#define num_layer_outputs 3
-#define num_inputs 3
-#define num_samples 1
-    int layer_outputs[num_layer_outputs] = {1, 1, 1};
-    Value *inputs[num_samples][num_inputs] = {
-        {value_init_constant(1), value_init_constant(2),
-         value_init_constant(3)},
-        // {value_init_constant(3), value_init_constant(2),
-        //  value_init_constant(1)},
-        // {value_init_constant(3), value_init_constant(2),
-        //  value_init_constant(1)},
-    };
-    Value *outputs[num_samples] = {
-        value_init_constant(1),
-        // value_init_constant(-1),
-        // value_init_constant(2),
-    };
-
-    MLP *mlp = mlp_init(num_inputs, layer_outputs, num_layer_outputs);
-
-    Value ***sample_outputs =
-        (Value ***)allocate(num_samples * sizeof(Value **));
-    for (int i = 0; i < num_samples; i++) {
-      Value **outputs = mlp_apply(mlp, inputs[i]);
-      sample_outputs[i] = outputs;
-    }
-
-    Value *loss = value_init_constant(0);
-    for (int i = 0; i < num_samples; i++) {
-      loss = value_add(loss,
-                       value_pow(value_minus(sample_outputs[i][0], outputs[i]),
-                                 value_init_constant(2)));
-    }
-
-    value_print_tree(loss);
-
-    free_loss(loss, num_samples);
-
-    for (int i = 0; i < num_samples; i++) {
-      mlp_free_outputs(mlp, sample_outputs[i]);
-    }
-    free(sample_outputs);
-
-    for (int i = 0; i < num_samples; i++) {
-      value_free(outputs[i]);
-    }
-
-    for (int i = 0; i < num_samples; i++) {
-      for (int j = 0; j < num_inputs; j++) {
-        value_free(inputs[i][j]);
-      }
-    }
-
-    mlp_free(mlp);
+    test_mlp_loss();
   }
 
   return 0;
