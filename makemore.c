@@ -177,13 +177,17 @@ Value *value_add(Value *value1, Value *value2) {
   return value_init_binary(value1->data + value2->data, ADD, value1, value2);
 }
 
-Value *value_minus(Value *value1, Value *value2) {
-  return value_add(value1, value_init_constant(-value2->data));
-}
-
 Value *value_times(Value *value1, Value *value2) {
   return value_init_binary(value1->data * value2->data, MULTIPLY, value1,
                            value2);
+}
+
+Value *value_negate(Value *value) {
+  return value_times(value, value_init_constant(-1));
+}
+
+Value *value_minus(Value *value1, Value *value2) {
+  return value_add(value1, value_negate(value2));
 }
 
 Value *value_tanh(Value *value) {
