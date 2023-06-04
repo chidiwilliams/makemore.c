@@ -248,7 +248,7 @@ void value_print(Value *value) {
     label = "pow";
   }
 
-  printf("[%4s | %f | %f]\n", label, value->data, value->grad);
+  printf("[%4s | %.10f | %f]\n", label, value->data, value->grad);
 }
 
 static void value_print_tree_at_depth(Value *value, int depth) {
@@ -366,16 +366,18 @@ void value_free(Value *value) {
   free(value);
 }
 
-#define RANDOM_WEIGHT() ((double)random() / (double)RAND_MAX)
+static double random_weight() {
+  return ((double)random() * 2 / (double)RAND_MAX) - 1;
+}
 
 Neuron *neuron_init(int num_inputs) {
   Neuron *neuron = (Neuron *)allocate(sizeof(Neuron));
   neuron->num_inputs = num_inputs;
-  neuron->b = value_init_constant_with_label(RANDOM_WEIGHT(), "b");
+  neuron->b = value_init_constant_with_label(random_weight(), "b");
 
   Value **w = (Value **)allocate(num_inputs * sizeof(Value));
   for (int i = 0; i < num_inputs; i++) {
-    w[i] = value_init_constant_with_label(RANDOM_WEIGHT(), "w");
+    w[i] = value_init_constant_with_label(random_weight(), "w");
   }
   neuron->w = w;
   return neuron;

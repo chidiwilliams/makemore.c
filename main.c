@@ -221,7 +221,7 @@ void test_mlp_loss() {
 
   MLP *mlp = mlp_init(NUM_INPUTS, layer_outputs, NUM_LAYER_OUTPUTS);
 
-#define NUM_TRAINING_RUNS 1
+#define NUM_TRAINING_RUNS 100
   for (int x = 0; x < NUM_TRAINING_RUNS; x++) {
     Value ***sample_outputs =
         (Value ***)allocate(NUM_SAMPLES * sizeof(Value **));
@@ -239,7 +239,7 @@ void test_mlp_loss() {
 
     value_backward_tree(loss);
 
-#define LEARNING_RATE -0.01
+#define LEARNING_RATE -0.005
     for (int i = 0; i < mlp->num_layers; i++) {
       Layer *layer = mlp->layers[i];
       for (int j = 0; j < layer->num_outputs; j++) {
